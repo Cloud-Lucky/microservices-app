@@ -1,34 +1,49 @@
 pipeline {
-  agent any
-  environment {
-    AWS_REGION = "us-east-1"
-    ACCOUNT_ID = "464621691834"
-    USER_ECR = "464621691834.dkr.ecr.us-east-1.amazonaws.com/user-service"
-    IMAGE = "v1"
-  }
+    agent any
 
-  stages {
-    stage ('git clone') {
-      steps {
-        git branch: 'main', changelog: false, poll: false, url: 'https://github.com/Cloud-Lucky/microservices-app.git'
-      }
+    environment {
+        AWS_REGION = "us-east-1"
+        ACCOUNT_ID = "464621691834"
+        USER_ECR = "464621691834.dkr.ecr.us-east-1.amazonaws.com/user-service"
+        ORDER_ECR = "464621691834.dkr.ecr.us-east-1.amazonaws.com/order-service"
+        IMAGE_TAG = "latest"
     }
-    stage (ECR-Login) {
-      steps {
-        withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CRED', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-        sh '
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-}
-      }
-    }
-    stage ('docker build and Push') {
-      steps {
-        dir('user-service') {
-          sh 'docker build -t user-service:$IMAGE .
-          sh 'docker tag user-service:$IMAGE $USER_ECR:$IMAGE
-          sh 'docker push $USER_ECR:$IMAGE
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/Cloud-Lucky/microservices-app.git'
+            }
         }
-      }
-    }
-  }
+        stage(Ecr_login) {
+            steps {
+                withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CRED', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+                    sh '''
+                    aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+                    '''
 }
+            }
+        }
+        stage('docker-build-tag-push-user-service') {
+            steps {
+                dir('user-service') {
+                    sh '''
+                    docker build -t user-service:$IMAGE_TAG .
+                    docker tag user-service:$IMAGE_TAG $USER_ECR:$IMAGE_TAG
+                    docker push $USER_ECR:$IMAGE_TAG
+                    '''
+                }
+            }
+        }
+        stage('docker-build-push-order-service') {
+            steps {
+                dir('order-service') {
+                    sh '''
+                    docker build -t order-service:$IMAGE_TAG .
+                    docker tag order-service:$IMAGE_TAG $ORDER_ECR:$IMAGE_TAG
+                    docker push $ORDER_ECR:$IMAGE_TAG
+                    '''
+                }
+            }
+        }
+    }
+}  
