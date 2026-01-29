@@ -25,7 +25,8 @@ pipeline {
       steps {
         dir('user-service') {
           sh 'docker build -t user-service:$IMAGE .
-          sh 'docker tag user-service:$IMAGE USER_ECR:$IMAGE
+          sh 'docker tag user-service:$IMAGE $USER_ECR:$IMAGE
+          sh 'docker push $USER_ECR:$IMAGE
         }
       }
     }
