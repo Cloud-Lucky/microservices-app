@@ -1,5 +1,11 @@
 pipeline {
   agent any
+  environment {
+    AWS_REGION = "us-east-1"
+    ACCOUNT_ID = "464621691834"
+    USER_ECR = "464621691834.dkr.ecr.us-east-1.amazonaws.com/user-service"
+    IMAGE = "v1"
+  }
 
   stages {
     stage ('git clone') {
@@ -7,10 +13,19 @@ pipeline {
         git branch: 'main', changelog: false, poll: false, url: 'https://github.com/Cloud-Lucky/microservices-app.git'
       }
     }
-    stage ('docker build') {
+    stage (ECR-Login) {
+      steps {
+        withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', credentialsId: 'AWS_CRED', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')]) {
+        sh '
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+}
+      }
+    }
+    stage ('docker build and Push') {
       steps {
         dir('user-service') {
-          sh 'docker build -t user-service:1.0 .
+          sh 'docker build -t user-service:$IMAGE .
+          sh 'docker tag user-service:$IMAGE USER_ECR:$IMAGE
         }
       }
     }
