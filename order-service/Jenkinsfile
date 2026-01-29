@@ -1,0 +1,18 @@
+pipeline {
+  agent any
+  
+  stages {
+    stage ('git clone') {
+      steps {
+        git branch: 'main', changelog: false, poll: false, url: 'https://github.com/Cloud-Lucky/microservices-app.git'
+      }
+    }
+    stage ('docker build') {
+      steps {
+        dir('order-service') {
+          sh 'docker build -t order-service:2.0 .
+        }
+      }
+    }
+  }
+}
